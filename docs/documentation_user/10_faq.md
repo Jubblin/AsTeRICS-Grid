@@ -13,6 +13,7 @@ As stated the quality and availability of these voices differs, in general **off
 
 ### Installing additional voices
 On most operating systems it's possible to install additional offline voices and afterwards use them in AsTeRICS Grid.
+A list of the offline and online voices currently available for each system can be downloaded here: [Overview Voices AG V1.2](https://github.com/user-attachments/files/18131362/Overview.Voices.AG.V1.2.pdf) (last updated: 2024-12)
 
 #### Microsoft Windows 10
 On Windows 10 follow these steps to install additional voices:
@@ -39,9 +40,6 @@ These voices are offered for the most important languages. Example models are th
 Generally, all Android tablets support an offline text-to-speech engine (and it is important to have voices available offline.) 
 You can read more about the topic in an article by ARASAAC here: https://aulaabierta.arasaac.org/comunicador-dinamico-asterics-grid-voces-sintetizadas-tts-android-ios
 We currently don't recommend iOS devcies (iPads) for AsTeRICS grid because Apple restricted the use of offline voices from web applications (like AsTeRICS Grid). 
-
-A list of the voices currently available for each system can be downloaded here: [Overview Voices AG](https://github.com/user-attachments/files/17969149/Overview.Voices.AG.pdf) (last updated: 2024-12)
-
 
 Other criteria for selecting a particular tablet model could be:
 * The audio output and quality of the built-in speakers
