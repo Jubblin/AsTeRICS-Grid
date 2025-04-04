@@ -23,7 +23,8 @@ class MetaData extends Model({
     colorConfig: [ColorConfig],
     textConfig: [TextConfig],
     notificationConfig: [NotificationConfig],
-    activateARASAACGrammarAPI: [Boolean]
+    activateARASAACGrammarAPI: [Boolean],
+    languageLevel: [Number, null]
 }) {
     constructor(properties, elementToCopy) {
         properties = modelUtil.setDefaults(properties, elementToCopy, MetaData) || {};
@@ -54,14 +55,14 @@ class MetaData extends Model({
         );
     }
 
-    static getElementColor(gridElement, metadata) {
+    static getElementColor(gridElement, metadata, defaultColor) {
         if (!metadata || !metadata.colorConfig) {
             return constants.DEFAULT_ELEMENT_BACKGROUND_COLOR;
         }
         let colorScheme = MetaData.getActiveColorScheme(metadata);
         let index = colorScheme.categories.indexOf(gridElement.colorCategory);
         if (!metadata.colorConfig.colorSchemesActivated || !gridElement.colorCategory || index === -1) {
-            return gridElement.backgroundColor || metadata.colorConfig.elementBackgroundColor;
+            return gridElement.backgroundColor || defaultColor || metadata.colorConfig.elementBackgroundColor;
         }
         return colorScheme.colors[index];
     }
@@ -84,7 +85,8 @@ MetaData.defaults({
     hashCodes: {},
     inputConfig: new InputConfig(),
     globalGridActive: false,
-    globalGridHeightPercentage: 17
+    globalGridHeightPercentage: 17,
+    languageLevel: null
 });
 
 export { MetaData };

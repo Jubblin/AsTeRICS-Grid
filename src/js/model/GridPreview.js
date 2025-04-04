@@ -14,6 +14,7 @@ class GridPreview {
      * @param {Array<string>} data.thumbnail urls to thumbnail
      * @param {string} data.pdf url to downloadable pdf
      * @param {Array<string>} data.tags
+     * @param {boolean} data.generateGlobalGrid
      * @param {Object} options
      * @param {string} [options.baseUrl] base url that is appended to all urls (data.url, data.images, data.thumbnail)
      * @param {number|Object<string,number>} [data.priority] priority information about this config, higher numbers mean higher priority, can be a map of langCode -> priority to define different priorities for different languages
@@ -30,13 +31,14 @@ class GridPreview {
         this.selfContained = data.selfContained;
         this.author = data.author;
         this.website = data.website;
-        this.languages = data.languages;
+        this.languages = data.languages || [];
         this.description = data.description;
         this.wordPrediction = data.wordPrediction;
         this.translate = data.translate;
         this.images = data.images.map(url => options.baseUrl + url);
         this.thumbnail = data.thumbnail ? options.baseUrl + data.thumbnail : undefined;
         this.tags = data.tags || [];
+        this.generateGlobalGrid = data.generateGlobalGrid || false;
         this.pdf = data.pdf;
         this.priority = data.priority || 0;
     }
