@@ -8,6 +8,7 @@ constants.LOCAL_NOLOGIN_USERNAME = 'default-user';
 constants.LOCAL_DEMO_USERNAME = 'local-demo-user';
 constants.LOCAL_DEFAULT_USER_PREFIX = 'default-';
 constants.USERNAME_REGEX = /^[a-z0-9][a-z0-9_-]{2,15}$/;
+constants.EMOJI_REGEX = /((\p{Regional_Indicator}{2})|((\p{Emoji}(?:\uFE0F|\u200D\p{Emoji})*)\u20E3?))/gu;
 
 constants.VALIDATION_ERROR_REGEX = 'VALIDATION_ERROR_REGEX';
 constants.VALIDATION_ERROR_EXISTING = 'VALIDATION_ERROR_EXISTING';
@@ -33,19 +34,28 @@ constants.EVENT_UI_UNLOCKED = 'EVENT_UI_UNLOCKED';
 
 constants.EVENT_GRID_RESIZE = 'EVENT_GRID_RESIZE';
 constants.EVENT_GRID_LOADED = 'EVENT_GRID_LOADED';
+constants.EVENT_GRID_RERENDER = 'EVENT_GRID_RERENDER';
 constants.EVENT_ELEM_TEXT_CHANGED = 'EVENT_ELEM_TEXT_CHANGED';
 constants.EVENT_USER_CHANGING = 'EVENT_USER_CHANGING';
 constants.EVENT_USER_CHANGED = 'EVENT_USER_CHANGED';
+constants.EVENT_USER_DELETED = 'EVENT_USER_DELETED';
 constants.EVENT_METADATA_UPDATED = 'EVENT_METADATA_UPDATED';
 constants.EVENT_APPSETTINGS_UPDATED = 'EVENT_APPSETTINGS_UPDATED';
 constants.EVENT_USERSETTINGS_UPDATED = 'EVENT_USERSETTINGS_UPDATED';
 constants.EVENT_CONFIG_RESET = 'EVENT_CONFIG_RESET';
 constants.EVENT_NAVIGATE_GRID_IN_VIEWMODE = 'EVENT_NAVIGATE_GRID_IN_VIEWMODE';
 constants.EVENT_NAVIGATE = 'EVENT_NAVIGATE';
+constants.EVENT_SPEAKING_TEXT = 'EVENT_SPEAKING_TEXT';
+
+constants.EVENT_MATRIX_SCROLL_UP = 'EVENT_MATRIX_SCROLL_UP';
+constants.EVENT_MATRIX_SCROLL_DOWN = 'EVENT_MATRIX_SCROLL_DOWN';
+constants.EVENT_MATRIX_SET_ROOM = 'EVENT_MATRIX_SET_ROOM';
+constants.EVENT_MATRIX_SENDING_START = 'EVENT_MATRIX_SENDING_START';
 
 constants.SW_EVENT_ACTIVATED = 'SW_EVENT_ACTIVATED';
 constants.SW_EVENT_URL_CACHED = 'SW_EVENT_URL_CACHED';
 constants.SW_EVENT_REQ_CACHE = 'SW_EVENT_REQ_CACHE';
+constants.SW_MATRIX_REQ_DATA = 'SW_MATRIX_REQ_DATA';
 constants.SW_CACHE_TYPE_IMG = 'CACHE_TYPE_IMG';
 constants.SW_CACHE_TYPE_GENERIC = 'CACHE_TYPE_GENERIC';
 
@@ -73,6 +83,7 @@ constants.VOICE_TYPE_EXTERNAL_DATA = 'VOICE_TYPE_EXTERNAL_DATA';
 constants.VOICE_DEVICE_DEFAULT = 'VOICE_DEVICE_DEFAULT';
 
 constants.WEBRADIO_LAST_VOLUME_KEY = 'WEBRADIO_LAST_VOLUME_KEY';
+constants.PODCAST_LAST_VOLUME_KEY = 'PODCAST_LAST_VOLUME_KEY';
 
 constants.GRIDSET_FOLDER = 'app/gridsets/';
 constants.BOARDS_REPO_BASE_URL = "https://asterics.github.io/AsTeRICS-Grid-Boards/";
@@ -80,6 +91,15 @@ constants.BOARDS_REPO_BASE_URL = "https://asterics.github.io/AsTeRICS-Grid-Board
 constants.BOARD_TYPE_SELFCONTAINED = "BOARD_TYPE_SELFCONTAINED";
 constants.BOARD_TYPE_SINGLE = "BOARD_TYPE_SINGLE";
 constants.BOARD_TYPES = [constants.BOARD_TYPE_SELFCONTAINED, constants.BOARD_TYPE_SINGLE];
+
+constants.COLORS = {
+    WHITE: '#ffffff',
+    WHITESMOKE: '#f5f5f5',
+    GRAY: '#808080',
+    BLACK: '#000000',
+    PREDICT_BACKGROUND: '#FFE4B2',
+    LIVE_BACKGROUND: '#C6ECFD'
+}
 
 constants.PROP_TRANSFER_DONT_CHANGE = "PROP_TRANSFER_DONT_CHANGE";
 constants.PROP_TRANSFER_TYPES = {
@@ -102,7 +122,13 @@ constants.TRANSFER_PROPS = {
     },
     BACKGROUND_COLOR: {
         path: 'backgroundColor',
-        label: 'customElementColor',
+        label: 'customBackgroundColor',
+        type: constants.PROP_TRANSFER_TYPES.COLOR,
+        category: constants.PROP_TRANSFER_CATEGORIES.APPEARANCE
+    },
+    BORDER_COLOR: {
+        path: 'borderColor',
+        label: 'customBorderColor',
         type: constants.PROP_TRANSFER_TYPES.COLOR,
         category: constants.PROP_TRANSFER_CATEGORIES.APPEARANCE
     },
@@ -125,8 +151,8 @@ constants.TRANSFER_PROPS = {
         category: constants.PROP_TRANSFER_CATEGORIES.OTHERS
     },
     LANGUAGE_LEVEL: {
-        path: 'languageLevel',
-        label: 'languageLevel',
+        path: 'vocabularyLevel',
+        label: 'vocabularyLevel',
         type: constants.PROP_TRANSFER_TYPES.NUMBER,
         category: constants.PROP_TRANSFER_CATEGORIES.OTHERS
     },
@@ -155,27 +181,96 @@ constants.DEFAULT_GRID_BACKGROUND_COLOR = '#e8e8e8';
 constants.DEFAULT_GRID_BACKGROUND_COLOR_DARK = '#000000';
 constants.COLOR_SCHEME_FITZGERALD_PREFIX = 'CS_MODIFIED_FITZGERALD_KEY';
 constants.COLOR_SCHEME_GOOSENS_PREFIX = 'CS_GOOSENS';
+constants.COLOR_SCHEME_MONTESSORI_PREFIX = 'CS_MONTESSORI';
+constants.COLOR_SCHEME_FITZGERALD_VERY_LIGHT = 'CS_MODIFIED_FITZGERALD_KEY_VERY_LIGHT';
 constants.COLOR_SCHEME_FITZGERALD_LIGHT = 'CS_MODIFIED_FITZGERALD_KEY_LIGHT';
 constants.COLOR_SCHEME_FITZGERALD_MEDIUM = 'CS_MODIFIED_FITZGERALD_KEY_MEDIUM';
 constants.COLOR_SCHEME_FITZGERALD_DARK = 'CS_MODIFIED_FITZGERALD_KEY_DARK';
+constants.COLOR_SCHEME_GOOSENS_VERY_LIGHT = 'CS_GOOSENS_VERY_LIGHT';
 constants.COLOR_SCHEME_GOOSENS_LIGHT = 'CS_GOOSENS_LIGHT';
 constants.COLOR_SCHEME_GOOSENS_MEDIUM = 'CS_GOOSENS_MEDIUM';
 constants.COLOR_SCHEME_GOOSENS_DARK = 'CS_GOOSENS_DARK';
+constants.COLOR_SCHEME_MONTESSORI_VERY_LIGHT = 'CS_MONTESSORI_VERY_LIGHT';
+constants.COLOR_SCHEME_MONTESSORI_LIGHT = 'CS_MONTESSORI_LIGHT';
+constants.COLOR_SCHEME_MONTESSORI_MEDIUM = 'CS_MONTESSORI_MEDIUM';
+constants.COLOR_SCHEME_MONTESSORI_DARK = 'CS_MONTESSORI_DARK';
+constants.CC_PRONOUN_PERSON_NAME = 'CC_PRONOUN_PERSON_NAME';
+constants.CC_NOUN = 'CC_NOUN';
+constants.CC_VERB = 'CC_VERB';
+constants.CC_DESCRIPTOR = 'CC_DESCRIPTOR';
+constants.CC_SOCIAL_EXPRESSIONS = 'CC_SOCIAL_EXPRESSIONS';
+constants.CC_MISC = 'CC_MISC';
+constants.CC_PLACE = 'CC_PLACE';
+constants.CC_CATEGORY = 'CC_CATEGORY';
+constants.CC_IMPORTANT = 'CC_IMPORTANT';
+constants.CC_OTHERS = 'CC_OTHERS';
+constants.CC_PREPOSITION = 'CC_PREPOSITION';
+constants.CC_QUESTION_NEGATION_PRONOUN = 'CC_QUESTION_NEGATION_PRONOUN';
+constants.CC_ARTICLE = 'CC_ARTICLE';
+constants.CC_ADJECTIVE = 'CC_ADJECTIVE';
+constants.CC_ADVERB = 'CC_ADVERB';
+constants.CC_CONJUNCTION = 'CC_CONJUNCTION';
+constants.CC_INTERJECTION = 'CC_INTERJECTION';
+constants.CS_FITZGERALD_CATEGORIES = [
+    constants.CC_PRONOUN_PERSON_NAME,
+    constants.CC_NOUN,
+    constants.CC_VERB,
+    constants.CC_DESCRIPTOR,
+    constants.CC_SOCIAL_EXPRESSIONS,
+    constants.CC_MISC,
+    constants.CC_PLACE,
+    constants.CC_CATEGORY,
+    constants.CC_IMPORTANT,
+    constants.CC_OTHERS
+];
+constants.CS_GOOSSENS_CATEGORIES = [constants.CC_VERB, constants.CC_DESCRIPTOR, constants.CC_PREPOSITION, constants.CC_NOUN, constants.CC_QUESTION_NEGATION_PRONOUN];
+constants.CS_MONTESSORI_CATEGORIES = [
+    constants.CC_NOUN,
+    constants.CC_ARTICLE,
+    constants.CC_ADJECTIVE,
+    constants.CC_VERB,
+    constants.CC_PREPOSITION,
+    constants.CC_ADVERB,
+    constants.CC_PRONOUN_PERSON_NAME,
+    constants.CC_CONJUNCTION,
+    constants.CC_INTERJECTION,
+    constants.CC_CATEGORY
+];
+constants.CS_MAPPING_TO_FITZGERALD = {
+    "CC_ADJECTIVE": constants.CC_DESCRIPTOR,
+    "CC_ADVERB": constants.CC_DESCRIPTOR,
+    "CC_ARTICLE": constants.CC_MISC,
+    "CC_PREPOSITION": constants.CC_MISC,
+    "CC_CONJUNCTION": constants.CC_MISC,
+    "CC_INTERJECTION": constants.CC_SOCIAL_EXPRESSIONS
+};
+
+// very light: for color mode background + border
+// light: for color mode background
+// medium: for color mode border
+// dark: color modes [background] or [background + border] for dark mode
 constants.DEFAULT_COLOR_SCHEMES = [
     {
+        name: constants.COLOR_SCHEME_FITZGERALD_VERY_LIGHT,
+        categories: constants.CS_FITZGERALD_CATEGORIES,
+        mappings: constants.CS_MAPPING_TO_FITZGERALD,
+        colors: [
+            '#fafad0',
+            '#fbf3e4',
+            '#dff4df',
+            '#eaeffd',
+            '#fff0f6',
+            '#ffffff',
+            '#fbf2ff',
+            '#ddccc1',
+            '#FCE8E8',
+            '#e4e4e4'
+        ]
+    },
+    {
         name: constants.COLOR_SCHEME_FITZGERALD_LIGHT,
-        categories: [
-            'CC_PRONOUN_PERSON_NAME',
-            'CC_NOUN',
-            'CC_VERB',
-            'CC_DESCRIPTOR',
-            'CC_SOCIAL_EXPRESSIONS',
-            'CC_MISC',
-            'CC_PLACE',
-            'CC_CATEGORY',
-            'CC_IMPORTANT',
-            'CC_OTHERS'
-        ],
+        categories: constants.CS_FITZGERALD_CATEGORIES,
+        mappings: constants.CS_MAPPING_TO_FITZGERALD,
         colors: [
             '#fdfd96',
             '#ffda89',
@@ -191,18 +286,8 @@ constants.DEFAULT_COLOR_SCHEMES = [
     },
     {
         name: constants.COLOR_SCHEME_FITZGERALD_MEDIUM,
-        categories: [
-            'CC_PRONOUN_PERSON_NAME',
-            'CC_NOUN',
-            'CC_VERB',
-            'CC_DESCRIPTOR',
-            'CC_SOCIAL_EXPRESSIONS',
-            'CC_MISC',
-            'CC_PLACE',
-            'CC_CATEGORY',
-            'CC_IMPORTANT',
-            'CC_OTHERS'
-        ],
+        categories: constants.CS_FITZGERALD_CATEGORIES,
+        mappings: constants.CS_MAPPING_TO_FITZGERALD,
         colors: [
             '#ffff6b',
             '#ffb56b',
@@ -211,57 +296,119 @@ constants.DEFAULT_COLOR_SCHEMES = [
             '#ff6bff',
             '#ffffff',
             '#ce6bff',
-            '#bd754e',
+            '#bf9075',
             '#ff704d',
             '#a3a3a3'
         ]
     },
     {
         name: constants.COLOR_SCHEME_FITZGERALD_DARK,
-        categories: [
-            'CC_PRONOUN_PERSON_NAME',
-            'CC_NOUN',
-            'CC_VERB',
-            'CC_DESCRIPTOR',
-            'CC_SOCIAL_EXPRESSIONS',
-            'CC_MISC',
-            'CC_PLACE',
-            'CC_CATEGORY',
-            'CC_IMPORTANT',
-            'CC_OTHERS'
-        ],
+        categories: constants.CS_FITZGERALD_CATEGORIES,
+        mappings: constants.CS_MAPPING_TO_FITZGERALD,
         colors: [
             '#79791F',
             '#804c26',
             '#4c8026',
             '#264c80',
             '#802680',
-            '#808080',
+            '#747474',
             '#602680',
             '#52331f',
             '#80261a',
-            '#4d4d4d'
+            '#464646'
         ]
     },
     {
+        name: constants.COLOR_SCHEME_GOOSENS_VERY_LIGHT,
+        categories: constants.CS_GOOSSENS_CATEGORIES,
+        colors: ['#fff0f6', '#eaeffd', '#dff4df', '#fafad0', '#fbf3e4']
+    },
+    {
         name: constants.COLOR_SCHEME_GOOSENS_LIGHT,
-        categories: ['CC_VERB', 'CC_DESCRIPTOR', 'CC_PREPOSITION', 'CC_NOUN', 'CC_QUESTION_NEGATION_PRONOUN'],
+        categories: constants.CS_GOOSSENS_CATEGORIES,
         colors: ['#fdcae1', '#84b6f4', '#c7f3c7', '#fdfd96', '#ffda89']
     },
     {
         name: constants.COLOR_SCHEME_GOOSENS_MEDIUM,
-        categories: ['CC_VERB', 'CC_DESCRIPTOR', 'CC_PREPOSITION', 'CC_NOUN', 'CC_QUESTION_NEGATION_PRONOUN'],
+        categories: constants.CS_GOOSSENS_CATEGORIES,
         colors: ['#ff6bff', '#6bb5ff', '#b5ff6b', '#ffff6b', '#ffb56b']
     },
     {
         name: constants.COLOR_SCHEME_GOOSENS_DARK,
-        categories: ['CC_VERB', 'CC_DESCRIPTOR', 'CC_PREPOSITION', 'CC_NOUN', 'CC_QUESTION_NEGATION_PRONOUN'],
+        categories: constants.CS_GOOSSENS_CATEGORIES,
         colors: [
             '#802680',
             '#264c80',
             '#4c8026',
             '#79791F',
             '#804c26']
+    },
+    {
+        name: constants.COLOR_SCHEME_MONTESSORI_VERY_LIGHT,
+        categories: constants.CS_MONTESSORI_CATEGORIES,
+        colors: [
+            '#ffffff', // noun
+            '#e3f5fa', // article
+            '#eaeffd', // adjective
+            '#FCE8E8', // verb
+            '#dff4df', // preposition
+            '#fbf3e4', // adverb
+            '#fbf2ff', // pronoun
+            '#fff0f6', // conjunction
+            '#fbf7e4', // interjection
+            '#e4e4e4'  // category
+        ],
+        customBorders: {
+            "CC_NOUN": '#353535'
+        }
+    },
+    {
+        name: constants.COLOR_SCHEME_MONTESSORI_LIGHT,
+        categories: constants.CS_MONTESSORI_CATEGORIES,
+        colors: [
+            '#afafaf',
+            '#a8e0f0',
+            '#a5bbf7',
+            '#f4a8a8',
+            '#ace3ac',
+            '#f2d7a6',
+            '#e4a5ff',
+            '#ffa5c9',
+            '#f2e5a6',
+            '#d1d1d1'
+        ]
+    },
+    {
+        name: constants.COLOR_SCHEME_MONTESSORI_MEDIUM,
+        categories: constants.CS_MONTESSORI_CATEGORIES,
+        colors: [
+            '#000000',
+            '#4ca6d9',
+            '#1347ae',
+            '#e73a0f',
+            '#04bf82',
+            '#fd9030',
+            '#6118a2',
+            '#f1c9d1',
+            '#aa996b',
+            '#d1d1d1'
+        ]
+    },
+    {
+        name: constants.COLOR_SCHEME_MONTESSORI_DARK,
+        categories: constants.CS_MONTESSORI_CATEGORIES,
+        colors: [
+            '#464646',
+            '#18728c',
+            '#0d3298',
+            '#931212',
+            '#287728',
+            '#BC5800',
+            '#7500a7',
+            '#a70043',
+            '#807351',
+            '#747474'
+        ]
     }
 ];
 

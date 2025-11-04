@@ -114,11 +114,17 @@ These are the global keyboard shortcuts available in AsTeRICS Grid:
 * `Ctrl + Pos1`: navigate to the main/home grid
 * `Ctrl + F`: open dialog for searching elements
 
+### Shortcuts in user mode
+The shortcuts available in user mode (normal grid view) are listed below.
+
+* `Ctrl + C`: copy current sentence from collection element to clipboard (as image).
+
 ### Shortcuts in edit mode
 The shortcuts available in edit mode are listed below.
 
 - `Ctrl + left mouse clicks`: select multiple elements, one after the other
 - `Shift + left mouse clicks`: select multiple connected elements
+- `Escape`: unselect all elements
 - `Ctrl + E`: edit selected element
 - `Ctrl + C`: copy selected elements to clipboard
 - `Ctrl + X`: cut selected elements (copy to clipboard and delete from current grid)
@@ -126,6 +132,8 @@ The shortcuts available in edit mode are listed below.
 - `Ctrl + A`: selects all elements
 - `Ctrl + D`: duplicates selected elements
 - `Ctrl + H`: hide / unhide selected elements
+- `Ctrl + I`: create a new element
+- `Ctrl + Shift + I`: create many new elements
 - `Delete`: deletes selected elements
 - `Ctrl + Z`: Undo
 - `Ctrl + Shift + Z`: Redo
@@ -137,9 +145,9 @@ The shortcuts available in edit mode are listed below.
 - `Ctrl + ArrowLeft`: move all elements left
 
 #### Transfer properties
-- `Ctrl + B`: configure property transfer for current selected element
 - `Ctrl + Shift + A`: directly transfer all properties of selected element (`A` like all)
 - `Ctrl + Shift + C`: directly transfer appearance properties of selected element (`C` like color)
+- `Ctrl + Shift + P`: transfer custom properties of selected element (`P` like properties)
 - `Escape`: cancel property transfer mode
 - `Enter`: apply property transfer to selected elements
 

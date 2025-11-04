@@ -1,7 +1,10 @@
+import { MapCache } from './MapCache';
+
 var fontUtil = {};
 var lastSize = '20px';
 
 let FONT_ADAPT_MAX_ROUNDS = 5;
+let hexToHslCache = new MapCache();
 
 /**
  * returns the optimal font size in px for a given grid element
@@ -163,8 +166,8 @@ fontUtil.getHighContrastColor = function(hexBackground, lightColor, darkColor) {
     if (!hexBackground || !hexBackground.startsWith('#')) {
         return '';
     }
-    lightColor = lightColor || '#ffffff';
-    darkColor = darkColor || '#000000';
+    lightColor = lightColor || constants.COLORS.WHITE;
+    darkColor = darkColor || constants.colors.BLACK;
     let rgb = hexToRgb(hexBackground);
     return fontUtil.getHighContrastColorRgb(rgb, lightColor, darkColor);
 };
@@ -182,23 +185,103 @@ fontUtil.getHighContrastColorRgb = function(rgb, lightColor, darkColor) {
             b: rgb[2]
         };
     }
-    let val = rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114;
-    if (val > 149) {
-        return darkColor;
-    } else {
+    if (fontUtil.isRGBDark(rgb)) {
         return lightColor;
+    } else {
+        return darkColor;
     }
+};
+
+fontUtil.isHexDark = function(hex) {
+    let rgb = hexToRgb(hex);
+    return fontUtil.isRGBDark(rgb);
+};
+
+fontUtil.isRGBDark = function(rgb) {
+    let val = rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114;
+    return val <= 149;
+}
+
+fontUtil.adjustHexColor = function(hexString, percent, returnHex = false) {
+    let hslObject = hexToHSL(hexString);
+    let adjustedHsl = fontUtil.adjustHSLColor(hslObject, percent);
+    if (returnHex) {
+        return hslToHex(adjustedHsl);
+    } else {
+        return `hsl(${adjustedHsl.h}, ${adjustedHsl.s}%, ${adjustedHsl.l}%)`;
+    }
+};
+
+window.adjustHexColor = fontUtil.adjustHexColor;
+
+fontUtil.adjustHSLColor = function(hslObject, percent) {
+    hslObject.l = Math.min(100, Math.max(0, hslObject.l * (1 + percent/100)));
+    return hslObject;
 };
 
 function hexToRgb(hex) {
     let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
         ? {
-              r: parseInt(result[1], 16),
-              g: parseInt(result[2], 16),
-              b: parseInt(result[3], 16)
-          }
-        : null;
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        }
+        : hex;
+}
+
+function hexToHSL(hex, returnValues = false) {
+    if (hexToHslCache.has(hex)) {
+        return hexToHslCache.get(hex);
+    }
+    let rgb = hexToRgb(hex);
+    let r = rgb.r;
+    let g = rgb.g;
+    let b = rgb.b;
+
+    (r /= 255), (g /= 255), (b /= 255);
+    const max = Math.max(r, g, b),
+        min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r:
+                h = (g - b) / d + (g < b ? 6 : 0);
+                break;
+            case g:
+                h = (b - r) / d + 2;
+                break;
+            case b:
+                h = (r - g) / d + 4;
+                break;
+        }
+        h /= 6;
+    }
+
+    let hsl = {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        l: Math.round(l * 100)
+    };
+    hexToHslCache.set(hex, hsl);
+    return hsl;
+}
+
+// https://stackoverflow.com/a/44134328/9219743
+function hslToHex(hslObject) {
+    let h = hslObject.h, l = hslObject.l, s = hslObject.s;
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');   // convert to Hex and prefix "0" if needed
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
 }
 
 function getCssStyle(element, prop) {

@@ -59,6 +59,7 @@
 .mouseentered.element-container {
     outline: thick solid green !important;
     background: lightgreen;
+    z-index: 10;
 }
 
 .marked.element-container {
@@ -114,4 +115,10 @@
 }
 .text-container.Jost-500-Medium,  .text-container.Jost-400-Book {
     font-feature-settings: 'ss01' on;
+}
+
+/* Text rotation classes for upside-down text display */
+.text-container.upside-down,
+.collect-container.upside-down {
+    transform: rotate(180deg);
 }

@@ -83,6 +83,7 @@
     import { GridElementLive } from '../../js/model/GridElementLive';
     import { liveElementService } from '../../js/service/liveElementService';
     import TransferPropsModal from '../modals/transferPropsModal.vue';
+    import { GridElementMatrixConversation } from '../../js/model/GridElementMatrixConversation';
 
     let vueApp = null;
 
@@ -157,18 +158,16 @@
                     $.contextMenu('destroy'); // if executed in same context, re-adding context menu after prop transfer does not work anymore for the transfer source element
                 })
             },
-            applyPropTransfer() {
+            async applyPropTransfer() {
                 let actionElements = this.getElementsForAction();
-                let changed = false;
                 for (let element of actionElements) {
                     for (let path of gridUtil.getAllPropTransferPaths()) {
                         if (this.propTransferObject[path] !== constants.PROP_TRANSFER_DONT_CHANGE) {
-                            changed = true;
-                            element[path] = this.propTransferObject[path];
+                            this.$set(element, path, this.propTransferObject[path]);
                         }
                     }
                 }
-                this.updateGridWithUndo();
+                await this.updateGridWithUndo();
                 this.stopPropTransfer();
             },
             stopPropTransfer() {
@@ -237,6 +236,7 @@
                 if (editElement) {
                     this.showEditModal = true;
                 }
+                this.unmarkAll();
             },
             removeElements(shouldIncludeId = null) {
                 let removeIds = this.getElementIdsForAction(shouldIncludeId);
@@ -245,10 +245,12 @@
                 }
                 this.gridData.gridElements = this.gridData.gridElements.filter((el) => !removeIds.includes(el.id));
                 this.updateGridWithUndo();
+                this.unmarkAll();
             },
             copyElements(shouldIncludeId = null) {
                 let elements = this.getElementsForAction(shouldIncludeId);
                 util.gridElementsToClipboard(elements);
+                this.unmarkAll();
             },
             copyAllElements() {
                 util.gridElementsToClipboard(this.gridData.gridElements);
@@ -260,6 +262,7 @@
                 }
                 util.gridElementsToClipboard(elements);
                 this.removeElements(shouldIncludeId);
+                this.unmarkAll();
             },
             async duplicateElements(shouldIncludeId = null) {
                 let elements = this.getElementsForAction(shouldIncludeId);
@@ -267,6 +270,7 @@
                     return;
                 }
                 let duplicates = gridUtil.duplicateElements(elements);
+                this.unmarkAll();
                 if (duplicates.length === 1) {
                     this.gridData.gridElements = gridLayoutUtil.insertDuplicate(this.gridData.gridElements, elements[0], duplicates[0], {
                         gridWidth: this.gridData.minColumnCount,
@@ -287,6 +291,7 @@
                     element.hidden = !allHidden;
                 }
                 this.updateGridWithUndo();
+                this.unmarkAll();
             },
             async newElement(type, useInteractionPos) {
                 if (type === GridElement.ELEMENT_TYPE_NORMAL) {
@@ -316,6 +321,8 @@
                     } else if (type === GridElement.ELEMENT_TYPE_LIVE) {
                         newElement = new GridElementLive(baseProperties);
                         showEdit = true;
+                    } else if (type === GridElement.ELEMENT_TYPE_MATRIX_CONVERSATION) {
+                        newElement = new GridElementMatrixConversation(baseProperties);
                     }
                     this.gridData.gridElements.push(newElement);
                     await this.updateGridWithUndo();
@@ -365,10 +372,11 @@
                 $('.element-container').addClass('marked');
                 this.markedElementIds = this.gridData.gridElements.map(e => e.id);
             },
-            markElement(id) {
+            async markElement(id) {
                 if (!id) {
                     return;
                 }
+                await this.$nextTick();
                 util.throttle(() => {
                     if (this.shiftKeyHold && this.markedElementIds.length) {
                         let allElems = this.gridData.gridElements;
@@ -383,7 +391,13 @@
                         }
                         return;
                     }
-                    if (!this.usingTouchscreen && !this.ctrlKeyHold) { // no multi-select mode
+                    if (this.markedElementIds.length === 1 && this.markedElementIds.includes(id)) {
+                        // unselect single marked element on second click
+                        this.unmarkAll();
+                        return;
+                    }
+                    if (!this.usingTouchscreen && !this.ctrlKeyHold) {
+                        // no multi-select mode on desktop without Ctrl
                         this.unmarkAll();
                     }
                     if (!this.markedElementIds.includes(id)) {
@@ -463,10 +477,25 @@
             onClick(event) {
                 if (vueApp && !this.isInteracting) {
                     let elementId = $(event.target).closest('.element-container').attr('id');
+                    let containerElement = $(event.target).closest('#grid-container')[0];
                     if (elementId) {
                         vueApp.markElement(elementId);
                     } else {
                         this.unmarkAll();
+                        if (containerElement && this.usingTouchscreen) {
+                            const newEvent = new MouseEvent("contextmenu", {
+                                bubbles: true,
+                                cancelable: true,
+                                clientX: event.clientX,
+                                clientY: event.clientY,
+                                pageX: event.pageX,
+                                pageY: event.pageY,
+                                screenX: event.screenX,
+                                screenY: event.screenY,
+                                button: 2
+                            });
+                            containerElement.dispatchEvent(newEvent);
+                        }
                     }
                 }
             },
@@ -561,13 +590,24 @@
                             this.configPropTransferAppearance();
                             return;
                         }
+                        if (event.shiftKey && event.code === 'KeyP') {
+                            event.preventDefault();
+                            this.configPropTransfer();
+                            return;
+                        }
+                        if (event.shiftKey && event.code === 'KeyI') {
+                            event.preventDefault();
+                            this.newElements();
+                            return;
+                        }
+                        if (event.code === 'KeyI') {
+                            event.preventDefault();
+                            this.newElement(GridElement.ELEMENT_TYPE_NORMAL);
+                            return;
+                        }
                         if (event.code === 'KeyA') {
                             event.preventDefault();
                             this.markAll();
-                        }
-                        if (event.code === 'KeyB') {
-                            event.preventDefault();
-                            this.configPropTransfer();
                         }
                         if (event.code === 'KeyD') {
                             event.preventDefault();
@@ -658,7 +698,7 @@
                 container.addEventListener('touchcancel', this.onTouchEnd);
                 container.addEventListener('touchend', this.onTouchEnd);
                 container.addEventListener("contextmenu", this.onContextMenu);
-                collectElementService.initWithElements(this.gridData.gridElements);
+                collectElementService.initWithGrid(this.gridData);
                 liveElementService.updateOnce({ elements: this.gridData.gridElements });
             });
         },
@@ -697,12 +737,14 @@
         let CONTEXT_ACTION_DO_ACTION = 'CONTEXT_ACTION_DO_ACTION';
 
         var CONTEXT_NEW_GROUP = "CONTEXT_NEW_GROUP";
+        var CONTEXT_NEW_GROUP_REDUCED = "CONTEXT_NEW_GROUP_REDUCED";
         var CONTEXT_NEW_SINGLE = "CONTEXT_NEW_SINGLE";
         var CONTEXT_NEW_MASS = "CONTEXT_NEW_MASS";
         var CONTEXT_NEW_COLLECT = "CONTEXT_NEW_COLLECT";
         var CONTEXT_NEW_PREDICT = "CONTEXT_NEW_PREDICT";
         var CONTEXT_NEW_YT_PLAYER = "CONTEXT_NEW_YT_PLAYER";
         var CONTEXT_NEW_LIVE = "CONTEXT_NEW_LIVE";
+        var CONTEXT_NEW_MATRIX_CONVERSATION = "CONTEXT_NEW_MATRIX_CONVERSATION";
 
         var CONTEXT_LAYOUT_ALL_UP = "CONTEXT_LAYOUT_ALL_UP";
         var CONTEXT_LAYOUT_ALL_RIGHT = "CONTEXT_LAYOUT_ALL_RIGHT";
@@ -721,31 +763,42 @@
         let CONTEXT_PROPERTY_TRANSFER_APPEARANCE = "CONTEXT_PROPERTY_TRANSFER_APPEARANCE";
         let CONTEXT_PROPERTY_TRANSFER_ALL = "CONTEXT_PROPERTY_TRANSFER_ALL";
 
-        var itemsGlobal = {
-            CONTEXT_NEW_GROUP: {
-                name: i18nService.t('new'), icon: "fas fa-plus-circle", items: {
-                    'CONTEXT_NEW_SINGLE': {name: i18nService.t('newElement'), icon: "fas fa-plus"},
-                    'CONTEXT_NEW_MASS': {name: i18nService.t('manyNewElements'), icon: "fas fa-clone"},
-                    'CONTEXT_NEW_COLLECT': {
-                        name: i18nService.t('newCollectElement'),
-                        icon: "fas fa-ellipsis-h"
-                    },
-                    'CONTEXT_NEW_PREDICT': {
-                        name: i18nService.t('newPredictionElement'),
-                        icon: "fas fa-magic"
-                    },
-                    'CONTEXT_NEW_YT_PLAYER': {
-                        name: i18nService.t('newYouTubePlayer'),
-                        icon: "fab fa-youtube"
-                    },
-                    'CONTEXT_NEW_LIVE': {
-                        name: i18nService.t('newLiveElement'),
-                        icon: "fas fa-star-of-life"
-                    }
+        let contextMenuNewGroup = {
+            name: i18nService.t('new'), icon: "fas fa-plus-circle", items: {
+                'CONTEXT_NEW_SINGLE': {name: i18nService.t('newElement'), icon: "fas fa-plus"},
+                'CONTEXT_NEW_MASS': {name: i18nService.t('manyNewElements'), icon: "fas fa-clone"},
+                'CONTEXT_NEW_COLLECT': {
+                    name: i18nService.t('newCollectElement'),
+                    icon: "fas fa-ellipsis-h"
+                },
+                'CONTEXT_NEW_PREDICT': {
+                    name: i18nService.t('newPredictionElement'),
+                    icon: "fas fa-magic"
+                },
+                'CONTEXT_NEW_YT_PLAYER': {
+                    name: i18nService.t('newYouTubePlayer'),
+                    icon: "fab fa-youtube"
+                },
+                'CONTEXT_NEW_LIVE': {
+                    name: i18nService.t('newLiveElement'),
+                    icon: "fas fa-star-of-life"
+                },
+                'CONTEXT_NEW_MATRIX_CONVERSATION': {
+                    name: i18nService.t('newMatrixConversation'),
+                    icon: "fas fa-comments"
                 }
-            },
-            CONTEXT_ACTION_PASTE: {name: i18nService.t('paste'), icon: "far fa-clipboard"},
+            }
         };
+
+        var itemsGlobal = {
+            'CONTEXT_NEW_SINGLE': {name: i18nService.t('newElement'), icon: "fas fa-plus"},
+            'CONTEXT_NEW_MASS': {name: i18nService.t('manyNewElements'), icon: "fas fa-clone"},
+            CONTEXT_ACTION_PASTE: {name: i18nService.t('paste'), icon: "far fa-clipboard"},
+            CONTEXT_NEW_GROUP_REDUCED: JSON.parse(JSON.stringify(contextMenuNewGroup))
+        };
+        itemsGlobal[CONTEXT_NEW_GROUP_REDUCED].items[CONTEXT_NEW_SINGLE].visible = false;
+        itemsGlobal[CONTEXT_NEW_GROUP_REDUCED].items[CONTEXT_NEW_MASS].visible = false;
+        itemsGlobal[CONTEXT_NEW_GROUP_REDUCED].name = i18nService.t('newSpecialElement');
 
         let itemsTransferProps = {
             'CONTEXT_PROPERTY_TRANSFER_ALL': { name: i18nService.t('transferAll'), icon: 'fas fa-angle-double-right' },
@@ -770,25 +823,28 @@
             CONTEXT_ACTION_DO_ACTION: {name: i18nService.t('doElementAction'), icon: "fas fa-bolt", visible: visibleNormalFn},
         };
 
+        let disabledFnFill = () => new GridData({}, vueApp.gridData).isFull();
         let itemsLayout = {
             name: i18nService.t('layout'), icon: 'fas fa-th-large', items: {
                 'CONTEXT_LAYOUT_ALL_UP': { name: i18nService.t('moveAllUp'), icon: 'fas fa-angle-double-up' },
                 'CONTEXT_LAYOUT_ALL_RIGHT': { name: i18nService.t('moveAllRight'), icon: 'fas fa-angle-double-right' },
                 'CONTEXT_LAYOUT_ALL_DOWN': { name: i18nService.t('moveAllDown'), icon: 'fas fa-angle-double-down' },
                 'CONTEXT_LAYOUT_ALL_LEFT': { name: i18nService.t('moveAllLeft'), icon: 'fas fa-angle-double-left' },
+                SEP1: "---------",
+                'CONTEXT_FILL_EMPTY': {name: i18nService.t('fillWithEmptyElements'), icon: "fas fa-fill", disabled: disabledFnFill},
+                'CONTEXT_DELETE_ALL': {name: i18nService.t('deleteAllElements'), icon: "fas fa-minus-circle"},
                 'CONTEXT_LAYOUT_NORMALIZE': { name: i18nService.t('normalizeGridLayout'), icon: 'fas fa-th' }
             }
         };
 
         let visibleFn = () => vueApp.markedElementIds.length >= 1;
-        let disabledFnFill = () => new GridData({}, vueApp.gridData).isFull();
         var itemsMoreMenuButton = {
             "SELECTED_ELEM_ACTIONS": {name: i18nService.t('selectedElementsContextMenu'), icon: "far fa-square", visible: visibleFn, items: itemsElemNormal},
             separator: { "type": "cm_separator", visible: visibleFn},
-            CONTEXT_NEW_GROUP: itemsGlobal[CONTEXT_NEW_GROUP],
-            'CONTEXT_FILL_EMPTY': {name: i18nService.t('fillWithEmptyElements'), icon: "fas fa-fill", disabled: disabledFnFill},
+            CONTEXT_NEW_GROUP: contextMenuNewGroup,
+            SEP0: "---------",
             'CONTEXT_COPY_ALL': {name: i18nService.t('copyAllElements'), icon: "fas fa-copy"},
-            'CONTEXT_DELETE_ALL': {name: i18nService.t('deleteAllElements'), icon: "fas fa-minus-circle"},
+            CONTEXT_ACTION_PASTE: {name: i18nService.t('paste'), icon: "far fa-clipboard"},
             SEP1: "---------",
             CONTEXT_GROUP_LAYOUT: itemsLayout,
             'CONTEXT_GRID_SETTINGS': {
@@ -863,6 +919,10 @@
                     vueApp.newElement(GridElement.ELEMENT_TYPE_LIVE);
                     break;
                 }
+                case CONTEXT_NEW_MATRIX_CONVERSATION: {
+                    vueApp.newElement(GridElement.ELEMENT_TYPE_MATRIX_CONVERSATION);
+                    break;
+                }
                 case CONTEXT_COPY_ALL: {
                     vueApp.copyAllElements();
                     break;
@@ -923,31 +983,24 @@
                 }
                 case CONTEXT_ACTION_EDIT:
                     vueApp.editElement(elementId);
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_ACTION_DELETE:
                     vueApp.removeElements(elementId);
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_ACTION_DUPLICATE:
                     vueApp.duplicateElements(elementId);
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_QUICK_HIDE:
                     vueApp.hideUnhideElements(elementId);
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_ACTION_COPY:
                     vueApp.copyElements(elementId);
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_ACTION_CUT:
                     vueApp.cutElements(elementId);
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_ACTION_PASTE:
                     vueApp.pasteElements();
-                    vueApp.unmarkAll();
                     break;
                 case CONTEXT_ACTION_DO_ACTION:
                     actionService.doAction(vueApp.gridData.id, elementId);

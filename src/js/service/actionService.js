@@ -31,6 +31,9 @@ import { liveElementService } from './liveElementService';
 import { GridElementLive } from '../model/GridElementLive';
 import { GridActionYoutube } from '../model/GridActionYoutube';
 import { GridActionWebradio } from '../model/GridActionWebradio';
+import { matrixAppService } from './matrixMessenger/matrixAppService';
+import { podcastService } from './podcastService';
+import { GridActionVocabLevelToggle } from '../model/GridActionVocabLevelToggle';
 
 let actionService = {};
 
@@ -96,12 +99,12 @@ async function doActions(gridElement, gridId) {
         );
     }
     $(window).trigger(constants.ELEMENT_EVENT_ID, [gridElement]);
-    actions.forEach((action) => {
-        doAction(gridElement, action, {
+    for (let action of actions) {
+        await doAction(gridElement, action, {
             gridId: gridId,
             actions: actions
         });
-    });
+    }
     metadata = metadata || (await dataService.getMetadata());
     let actionTypes = actions.map((a) => a.modelName);
     let navBackActions = [GridActionAudio.getModelName(), GridActionChangeLang.getModelName(), GridActionSpeak.getModelName(), GridActionSpeakCustom.getModelName()];
@@ -139,16 +142,14 @@ async function doAction(gridElement, action, options = {}) {
     switch (action.modelName) {
         case 'GridActionSpeak':
             log.debug('action speak');
-            let langWordFormMap = stateService.getSpeakTextAllLangs(gridElement.id);
-            let labelCopy = JSON.parse(JSON.stringify(gridElement.label));
-            Object.assign(labelCopy, langWordFormMap);
+            let speakTexts = stateService.getSpeakTextAllLangs(gridElement.id);
             if (gridElement.type === GridElement.ELEMENT_TYPE_PREDICTION) {
-                labelCopy[i18nService.getContentLang()] = predictionService.getLastAppliedPrediction();
+                speakTexts[i18nService.getContentLang()] = predictionService.getLastAppliedPrediction();
             }
             if (gridElement.type === GridElement.ELEMENT_TYPE_LIVE) {
-                labelCopy[i18nService.getContentLang()] = liveElementService.getLastValue(gridElement.id);
+                speakTexts[i18nService.getContentLang()] = liveElementService.getLastValue(gridElement.id);
             }
-            speechService.speak(labelCopy, {
+            speechService.speak(speakTexts, {
                 lang: action.speakLanguage,
                 speakSecondary: true,
                 minEqualPause: minPauseSpeak
@@ -244,13 +245,16 @@ async function doAction(gridElement, action, options = {}) {
             break;
         case 'GridActionCollectElement':
             log.debug('action collect element');
-            collectElementService.doCollectElementActions(action.action);
+            collectElementService.doCollectElementActions(action.action, gridElement);
             break;
         case 'GridActionWebradio':
             webradioService.doAction(options.gridId, action);
             break;
         case 'GridActionYoutube':
             youtubeService.doAction(action);
+            break;
+        case 'GridActionPodcast':
+            await podcastService.doAction(action);
             break;
         case 'GridActionChangeLang':
             let language = action.language;
@@ -261,6 +265,20 @@ async function doAction(gridElement, action, options = {}) {
             let voiceConfig = localStorageService.getUserSettings().voiceConfig;
             voiceConfig.preferredVoice = action.voice;
             localStorageService.saveUserSettings({voiceConfig: voiceConfig});
+            break;
+        case 'GridActionVocabLevelToggle':
+            let isToggled = localStorageService.get(localStorageService.KEY_CURRENT_TOGGLE_LEVEL);
+
+            // If we have a toggle active, remove it to go back to settings level
+            if (isToggled) {
+                localStorageService.remove(localStorageService.KEY_CURRENT_TOGGLE_LEVEL);
+            } else {
+                // Toggle to full: save null (show all vocabulary)
+                localStorageService.saveJSON(localStorageService.KEY_CURRENT_TOGGLE_LEVEL, null);
+            }
+
+            // Trigger grid rerender (local change only, doesn't modify metadata)
+            $(document).trigger(constants.EVENT_GRID_RERENDER);
             break;
         case 'GridActionOpenWebpage':
             let tab = window.open(action.openURL, '_blank');
@@ -278,6 +296,9 @@ async function doAction(gridElement, action, options = {}) {
             break;
         case 'GridActionPredefined':
             return doPredefinedAction(gridElement, action);
+            break;
+        case 'GridActionMatrix':
+            await matrixAppService.doAction(action);
             break;
     }
 }

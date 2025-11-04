@@ -184,11 +184,16 @@ gridUtil.getOffset = function (globalGrid) {
     }
 };
 
+/**
+ * returns a list of free coordinates in the given grid
+ * @param gridData
+ * @returns {{x: *, y: *}[]}
+ */
 gridUtil.getFreeCoordinates = function (gridData) {
     let tempGridData = new GridData({}, gridData);
     let xyMap = {};
-    for (let x = 0; x < tempGridData.getWidthWithBounds(); x++) {
-        for (let y = 0; y < tempGridData.rowCount; y++) {
+    for (let y = 0; y < tempGridData.getHeightWithBounds(); y++) {
+        for (let x = 0; x < tempGridData.getWidthWithBounds(); x++) {
             xyMap[x + ' ' + y] = {
                 x: x,
                 y: y
@@ -282,30 +287,45 @@ gridUtil.getGraphList = function (grids, removeGridId, orderByName) {
  * @param startGraphElem the graph element to start
  * @param paths internal, used for recursion
  * @param currentPath internal, used for recursion
+ * @param existingPathEndsMap internal, used for recursion, a map for counting how often a specific grid was the
+ *                            last grid of an existing path. So map[gridId] === 3 means that in the current calculated
+ *                            paths there are 3 paths that have grid with "gridId" as last element
  * @return {*[]|number} an array containing all possible paths through the graph with the given
  *                      start element.
  *                      e.g. [[startElem.grid, childGrid, childOfChild, ...],
  *                            [startElem.grid, otherChild, ...], ...]
  */
-gridUtil.getAllPaths = function (startGraphElem, paths, currentPath) {
+gridUtil.getAllPaths = function (startGraphElem, paths, currentPath, existingPathEndsMap = {}) {
+    let MAX_PATHS_TO_SAME_GRID = 1;
     if (!startGraphElem) {
         return [];
     }
     paths = paths || [];
     currentPath = currentPath || [];
     if (currentPath.includes(startGraphElem)) {
-        paths.push(currentPath);
+        addPath();
         return paths;
     }
     currentPath.push(startGraphElem);
     if (startGraphElem.children.length === 0) {
-        paths.push(currentPath);
+        addPath();
+        return paths;
+    }
+    let lastId = currentPath[currentPath.length - 1].grid.id;
+    if (existingPathEndsMap[lastId] >= MAX_PATHS_TO_SAME_GRID) {
+        addPath();
         return paths;
     }
     for (let child of startGraphElem.children) {
-        gridUtil.getAllPaths(child, paths, currentPath.concat([]));
+        gridUtil.getAllPaths(child, paths, currentPath.concat([]), existingPathEndsMap);
     }
     return paths;
+
+    function addPath() {
+        paths.push(currentPath);
+        let lastId = currentPath[currentPath.length - 1].grid.id;
+        existingPathEndsMap[lastId] = existingPathEndsMap[lastId] ? existingPathEndsMap[lastId] + 1 : 1;
+    }
 }
 
 /**
@@ -458,10 +478,11 @@ gridUtil.mergeGrids = function(grid, globalGrid, options = {}) {
         let heightFactorNormal = 1;
         let heightFactorGlobal = 1;
         if (gridUtil.getHeight(globalGrid) === 1) {
-            heightFactorGlobal = (heightPercentage * grid.rowCount) / (1 - heightPercentage);
-            heightFactorNormal = 1 / (grid.rowCount * heightPercentage) - 1 / grid.rowCount;
+            let height = gridUtil.getHeightWithBounds(grid);
+            heightFactorGlobal = (heightPercentage * height) / (1 - heightPercentage);
+            heightFactorNormal = 1 / (height * heightPercentage) - 1 / height;
             heightFactorGlobal = Math.round(heightPercentage * 100);
-            heightFactorNormal = Math.round(((1 - heightPercentage) / grid.rowCount) * 100);
+            heightFactorNormal = Math.round(((1 - heightPercentage) / height) * 100);
         }
         let offset = gridUtil.getOffset(globalGrid);
         let factorGrid = autowidth ? gridUtil.getWidth(globalGrid) - offset.x : 1;
@@ -520,14 +541,36 @@ gridUtil.hasOutdatedThumbnail = function(gridData) {
 gridUtil.getHash = function(gridData) {
     let string = '';
     gridData.gridElements.forEach((e) => {
-        string += JSON.stringify(e.label) + e.x + e.y;
-        if (e.image && (e.image.data || e.image.url)) {
-            let temp = e.image.data || e.image.url;
-            string += temp.substring(temp.length > 30 ? temp.length - 30 : 0);
-        }
+        string += gridUtil.getElementHash(e, {
+            dontHash: true
+        });
     });
     return encryptionService.getStringHash(string);
 };
+
+/**
+ * gets a SHA256 hash of a grid element for identifying it
+ *
+ * @param element the element to hash
+ * @param options
+ * @param options.dontHash if true hashing with SHA256 is skipped, a plain string including the characteristics of the element is returned instead
+ * @param options.skipPosition if true position values are not included in calculating the hash
+ * @returns {string|*}
+ */
+gridUtil.getElementHash = function(element, options = {}) {
+    options.dontHash = options.dontHash || false;
+    options.skipPosition = options.skipPosition || false;
+    let string = element.id + JSON.stringify(element.label);
+    string += element.backgroundColor + element.colorCategory;
+    if (!options.skipPosition) {
+        string += `${element.x}:${element.y}`;
+    }
+    if (element.image && (element.image.data || element.image.url)) {
+        let temp = element.image.data || element.image.url;
+        string += temp.substring(temp.length > 30 ? temp.length - 30 : 0);
+    }
+    return options.dontHash ? string : encryptionService.getStringHash(string);
+}
 
 gridUtil.getWidth = function(gridDataOrElements) {
     let gridElements = getGridElements(gridDataOrElements);
@@ -554,6 +597,9 @@ gridUtil.getHeightWithBounds = function(gridDataOrElements) {
  * @returns {*}
  */
 gridUtil.ensureDefaults = function(gridData) {
+    if (!gridData) {
+        return;
+    }
     for (let key of Object.keys(GridData.DEFAULTS)) {
         gridData[key] = gridData[key] === undefined ? GridData.DEFAULTS[key] : gridData[key];
     }
@@ -659,6 +705,13 @@ gridUtil.getPropTransferObjectAppearance = function(sourceElement) {
         transferObject[prop.path] = sourceElement[prop.path];
     }
     return transferObject;
+};
+
+gridUtil.getCursorType = function(metadata, defaultCursorType = "default") {
+    if (!metadata || !metadata.inputConfig || !metadata.inputConfig.hoverEnabled || !metadata.inputConfig.hoverHideCursor) {
+        return defaultCursorType;
+    }
+    return 'none';
 };
 
 function getAllChildrenRecursive(gridGraphList, gridId) {

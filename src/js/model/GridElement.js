@@ -19,6 +19,9 @@ import {GridActionWordForm} from "./GridActionWordForm.js";
 import { GridActionUART } from './GridActionUART.js';
 import { GridActionSystem } from './GridActionSystem';
 import { GridActionPredefined } from './GridActionPredefined';
+import { GridActionMatrix } from './GridActionMatrix';
+import { GridActionPodcast } from './GridActionPodcast';
+import { GridActionVocabLevelToggle } from './GridActionVocabLevelToggle';
 
 class GridElement extends Model({
     id: String,
@@ -29,10 +32,12 @@ class GridElement extends Model({
     x: [Number],
     y: [Number],
     label: [Object, String, undefined], //map locale -> translation, e.g. "de" => LabelDE
+    pronunciation: [Object], //map locale -> pronunciation, e.g. "de" => pronunciationDE
     wordForms: [Model.Array(Object)], //Array of WordForm, removed for performance reasons
     fontSizePct: [Number],
     fontColor: [String],
-    backgroundColor: [String], // could be renamed to "customColor" since it can be custom border or background color
+    backgroundColor: [String], // also used as border color for color mode: "border", see https://github.com/asterics/AsTeRICS-Grid/issues/580#issuecomment-3281187917
+    borderColor: [String], // only used for color mode: "both"!
     colorCategory: [String],
     hidden: [Boolean],
     dontCollect: [Boolean],
@@ -40,7 +45,7 @@ class GridElement extends Model({
     image: [GridImage],
     actions: [Object],
     type: String,
-    languageLevel: [Number, null],
+    vocabularyLevel: [Number, null],
     additionalProps: [Object]
 }) {
     constructor(properties, elementToCopy) {
@@ -77,12 +82,15 @@ class GridElement extends Model({
             GridActionOpenHAB,
             GridActionWebradio,
             GridActionYoutube,
+            GridActionPodcast,
             GridActionChangeLang,
             GridActionOpenWebpage,
             GridActionHTTP,
             GridActionUART,
             GridActionSystem,
-            GridActionPredefined
+            GridActionPredefined,
+            GridActionMatrix,
+            GridActionVocabLevelToggle
         ];
     }
 
@@ -122,6 +130,7 @@ GridElement.ELEMENT_TYPE_COLLECT = 'ELEMENT_TYPE_COLLECT';
 GridElement.ELEMENT_TYPE_PREDICTION = 'ELEMENT_TYPE_PREDICTION';
 GridElement.ELEMENT_TYPE_YT_PLAYER = 'ELEMENT_TYPE_YT_PLAYER';
 GridElement.ELEMENT_TYPE_LIVE = 'ELEMENT_TYPE_LIVE';
+GridElement.ELEMENT_TYPE_MATRIX_CONVERSATION = 'ELEMENT_TYPE_MATRIX_CONVERSATION';
 
 GridElement.PROP_YT_PREVENT_CLICK = 'PROP_YT_PREVENT_CLICK';
 
@@ -132,6 +141,7 @@ GridElement.DEFAULTS = {
     modelName: GridElement.getModelName(),
     modelVersion: constants.MODEL_VERSION,
     label: {},
+    pronunciation: {},
     width: 1,
     height: 1,
     image: new GridImage(),
@@ -141,7 +151,7 @@ GridElement.DEFAULTS = {
     x: 0,
     y: 0,
     hidden: false,
-    languageLevel: null
+    vocabularyLevel: null
 }
 
 export { GridElement };

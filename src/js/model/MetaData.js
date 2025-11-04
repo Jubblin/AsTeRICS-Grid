@@ -5,6 +5,7 @@ import { Model } from '../externals/objectmodel';
 import { ColorConfig } from './ColorConfig.js';
 import { TextConfig } from './TextConfig.js';
 import { NotificationConfig } from './NotificationConfig.js';
+import { IntegrationConfigSync } from './IntegrationConfigSync.js';
 
 class MetaData extends Model({
     id: String,
@@ -24,7 +25,8 @@ class MetaData extends Model({
     textConfig: [TextConfig],
     notificationConfig: [NotificationConfig],
     activateARASAACGrammarAPI: [Boolean],
-    languageLevel: [Number, null]
+    vocabularyLevel: [Number, null],
+    integrations: [Object] // IntegrationConfigSync
 }) {
     constructor(properties, elementToCopy) {
         properties = modelUtil.setDefaults(properties, elementToCopy, MetaData) || {};
@@ -34,6 +36,7 @@ class MetaData extends Model({
         this.textConfig = properties.textConfig || new TextConfig();
         this.notificationConfig = properties.notificationConfig || new NotificationConfig();
         this.homeGridId = properties.homeGridId || null;
+        this.integrations = Object.assign(new IntegrationConfigSync(), this.integrations);
     }
 
     isEqual(otherMetadata) {
@@ -46,6 +49,13 @@ class MetaData extends Model({
         return JSON.stringify(comp1) == JSON.stringify(comp2);
     }
 
+    static getUseColorScheme(metadata) {
+        if (!metadata || !metadata.colorConfig || !metadata.colorConfig.colorSchemesActivated) {
+            return null;
+        }
+        return MetaData.getActiveColorScheme(metadata);
+    }
+
     static getActiveColorScheme(metadata) {
         metadata = metadata || new MetaData();
         return (
@@ -55,16 +65,19 @@ class MetaData extends Model({
         );
     }
 
-    static getElementColor(gridElement, metadata, defaultColor) {
-        if (!metadata || !metadata.colorConfig) {
-            return constants.DEFAULT_ELEMENT_BACKGROUND_COLOR;
+    static getElementColor(gridElement = {}, metadata, fallbackColor) {
+        metadata = metadata || new MetaData();
+        let defaultColor = gridElement.backgroundColor || fallbackColor || metadata.colorConfig.elementBackgroundColor || constants.DEFAULT_ELEMENT_BACKGROUND_COLOR;
+        let colorScheme = MetaData.getUseColorScheme(metadata);
+        if (!colorScheme) {
+            return defaultColor;
         }
-        let colorScheme = MetaData.getActiveColorScheme(metadata);
         let index = colorScheme.categories.indexOf(gridElement.colorCategory);
-        if (!metadata.colorConfig.colorSchemesActivated || !gridElement.colorCategory || index === -1) {
-            return gridElement.backgroundColor || defaultColor || metadata.colorConfig.elementBackgroundColor;
+        if (index === -1 && colorScheme.mappings) {
+            let mapped = colorScheme.mappings[gridElement.colorCategory];
+            index = colorScheme.categories.indexOf(mapped);
         }
-        return colorScheme.colors[index];
+        return index === -1 ? defaultColor : colorScheme.colors[index];
     }
 
     static getModelName() {
@@ -86,7 +99,8 @@ MetaData.defaults({
     inputConfig: new InputConfig(),
     globalGridActive: false,
     globalGridHeightPercentage: 17,
-    languageLevel: null
+    vocabularyLevel: null,
+    integrations: new IntegrationConfigSync()
 });
 
 export { MetaData };

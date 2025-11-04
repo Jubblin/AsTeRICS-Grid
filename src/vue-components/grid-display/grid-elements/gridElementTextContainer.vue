@@ -1,7 +1,7 @@
 <template>
     <div ref="txtContainer" :class="`text-container ${metadata.textConfig.fontFamily}`"
          :style="`order: ${metadata.textConfig.textPosition === TextConfig.TEXT_POS_BELOW ? 1 : 0};
-                  text-align: center; font-size: ${fontSizePx}px; line-height: ${lineHeight}; color: ${gridElement && gridElement.fontColor ? gridElement.fontColor : metadata.textConfig.fontColor};
+                  text-align: center; font-size: ${fontSizePx}px; line-height: ${lineHeight}; color: ${gridElement && gridElement.fontColor ? gridElement.fontColor : 'unset'};
                   flex-grow: ${withImage ? '0' : '1'};`">
         <span :style="`max-height: ${maxTextContainerHeight}; text-overflow: ${textOverflow}; white-space: ${whiteSpaceWrap}; margin: 0 ${txtMargin}px;`">
             <span v-html="displayLabel"/>
@@ -96,7 +96,7 @@ export default {
                 fontSize = newFontSize;
             }
             if (!this.disableAutoSizeKeyboard && this.metadata.textConfig.autoSizeKeyboardLetters && !this.withImage &&
-                (label.length === 1 || (label.length === 2 && /\p{Emoji}/u.test(label)))) { // keyboard letters
+                (label.length === 1 || (label.length === 2 && new RegExp(constants.EMOJI_REGEX, "").test(label)))) { // keyboard letters
                 fontSize = fontUtil.getFittingFontSize(label, this.$refs.txtContainer.parentElement, {
                     containerPct: kbdContainerPct,
                     lineHeight: this.lineHeight,

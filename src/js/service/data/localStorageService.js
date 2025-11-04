@@ -12,8 +12,10 @@ let GRID_DIMENSIONS_KEY = 'AG_GRID_DIMENSIONS_KEY';
 let CURRENT_VERSION_KEY = 'AG_CURRENT_VERSION_KEY';
 let APP_SETTINGS = 'AG_APP_SETTINGS';
 let USER_SETTINGS = 'AG_USER_SETTINGS';
+let CURRENT_TOGGLE_LEVEL_KEY = 'CURRENT_TOGGLE_LEVEL';
 
 let localStorageService = {};
+localStorageService.KEY_CURRENT_TOGGLE_LEVEL = CURRENT_TOGGLE_LEVEL_KEY;
 let storage = window.localStorage;
 window.service = localStorageService;
 
@@ -115,6 +117,21 @@ localStorageService.saveUserSettings = function (settings, username) {
     localStorageService.saveJSON(USER_SETTINGS, fullSettings);
     $(document).trigger(constants.EVENT_USERSETTINGS_UPDATED, existingSettings);
 }
+
+/**
+ * checks if any matrix messenger user logged in on this device already uses crypto
+ * @returns {boolean} true, if any matrix user uses crypto
+ */
+localStorageService.anyMatrixUserUsingCrypto = function() {
+    let allUserSettings = localStorageService.getJSON(USER_SETTINGS) || {};
+    let anyCrypto = false;
+    for (let settings of Object.values(allUserSettings)) {
+        if (settings.integrations && settings.integrations.matrixConfig) {
+            anyCrypto = anyCrypto || settings.integrations.matrixConfig.useCrypto;
+        }
+    }
+    return anyCrypto;
+};
 
 localStorageService.getAutoImportedUserSettings = function() {
     let allSettings = localStorageService.getJSON(USER_SETTINGS) || {};

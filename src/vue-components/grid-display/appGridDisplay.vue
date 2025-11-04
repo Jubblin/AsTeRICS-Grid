@@ -1,12 +1,12 @@
 <template>
-    <div ref="mainContainer" style="flex: 1 1 auto; max-width: 100%; min-height: 0">
-        <grid-layout ref="gridLayout" v-if="gridData && oneElementSize" :key="gridData.id"
+    <div ref="mainContainer" :style="`flex: 1 1 auto; max-width: 100%; min-height: 0; cursor: ${cursorType}`">
+        <grid-layout ref="gridLayout" v-if="gridData && oneElementSize" :key="gridData.id + gridData.gridElements.length + gridData.rowCount + gridData.minColumnCount"
                      :elements="gridData.gridElements" :render-component="AppGridElement"
                      :background-color="metadata.colorConfig.gridBackgroundColor"
                      :rows="gridData.rowCount" :columns="gridData.minColumnCount"
                      :metadata="metadata" :one-element-size="oneElementSize" v-on="$listeners" v-bind="$attrs"
                      :show-resize-handle="editable" :editable="editable" :background-lines="editable"
-        >
+                     :key-function="getKey">
         </grid-layout>
     </div>
 </template>
@@ -35,6 +35,11 @@ export default {
             this.recalculate();
         }
     },
+    computed: {
+        cursorType() {
+            return gridUtil.getCursorType(this.metadata);
+        }
+    },
     methods: {
         recalculate() {
             let containerSize = this.$refs.mainContainer.getBoundingClientRect(); // don't use async util.getElementSize since it leads to problems in gridView initializing input methods too early
@@ -48,6 +53,13 @@ export default {
                 this.recalculate();
             }, 100, "WINDOW_RESIZE" + this.gridData.id);
         },
+        getKey(elem) {
+            if (this.editable) {
+                return gridUtil.getElementHash(elem, { skipPosition: true, dontHash: true });
+            } else {
+                return elem.id;
+            }
+        }
     },
     mounted() {
         this.recalculate();

@@ -7,7 +7,7 @@
             </div>
             <select class="eight columns" id="selectLang" v-model="action.speakLanguage">
                 <option :value="undefined">{{ $t('automaticCurrentLanguage') }}</option>
-                <option v-for="lang in voiceLangs.filter(e => Object.keys(gridElement.label).includes(e.code))" :value="lang.code">
+                <option v-for="lang in voiceLangs" :value="lang.code">
                     {{lang | extractTranslation}}
                 </option>
             </select>
@@ -87,6 +87,9 @@
     <div v-if="action.modelName === 'GridActionPredefined'">
         <edit-predefined-action :action="action" :grid-data="gridData" v-on="$listeners"/>
     </div>
+    <div v-if="action.modelName === 'GridActionMatrix'">
+        <edit-matrix-action :action="action"/>
+    </div>
     <div v-if="action.modelName == 'GridActionPredict'">
         <div class="srow" v-show="gridElement.type === GridElement.ELEMENT_TYPE_COLLECT">
             <div class="eight columns">
@@ -142,10 +145,13 @@
             </div>
         </div>
         <div class="srow">
-            <accordion :acc-label="$t('manageWebradioList')" :acc-open="gridData.webRadios.length === 0 ? 'true' : 'false'" class="twelve columns">
+            <accordion :acc-label="$t('manageWebradioList')" :acc-open="gridData.webRadios.length === 0" class="twelve columns">
                 <radio-list-selector :grid-data="gridData"></radio-list-selector>
             </accordion>
         </div>
+    </div>
+    <div v-if="action.modelName == 'GridActionPodcast'">
+        <edit-podcast-action :action="action" :grid-data="gridData"></edit-podcast-action>
     </div>
     <div v-if="action.modelName === 'GridActionYoutube'">
         <div class="srow">
@@ -241,6 +247,22 @@
             <button id="testVoice2" class="four columns offset-by-four" :disabled="!action.voice" @click="speechService.testSpeak(action.voice, null, action.language)">{{ $t('testVoice') }}</button>
         </div>
     </div>
+    <div v-if="action.modelName === 'GridActionVocabLevelToggle'">
+        <div class="srow">
+            <div class="twelve columns">
+                <label for="vocabLevelMode" class="four columns normal-text">{{ $t('actionType') }}</label>
+                <select id="vocabLevelMode" class="eight columns" v-model="action.mode">
+                    <option v-for="mode in GridActionVocabLevelToggle.getModes()" :value="GridActionVocabLevelToggle.modes[mode]">{{ mode | translate }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="srow">
+            <div class="twelve columns">
+                <span class="fa fa-info-circle"></span>
+                <span>{{ $t('vocabLevelToggleDescription') }}</span>
+            </div>
+        </div>
+    </div>
     <div v-if="action.modelName === 'GridActionOpenWebpage'">
         <div class="srow">
             <div class="twelve columns">
@@ -323,8 +345,10 @@
     import { gridUtil } from '../../js/util/gridUtil';
     import { GridActionSystem } from '../../js/model/GridActionSystem';
     import { GridActionChangeLang } from '../../js/model/GridActionChangeLang';
+    import { GridActionVocabLevelToggle } from '../../js/model/GridActionVocabLevelToggle';
     import EditPredefinedAction from './editActionsSub/editPredefinedAction.vue';
-    import { GridData } from '../../js/model/GridData';
+    import EditMatrixAction from './editActionsSub/editMatrixAction.vue';
+    import EditPodcastAction from './editActionsSub/editPodcastAction.vue';
 
     export default {
         props: ['action', 'grids', 'gridData', 'gridElement'],
@@ -345,12 +369,15 @@
                 GridActionPredict: GridActionPredict,
                 GridActionSystem: GridActionSystem,
                 GridActionChangeLang: GridActionChangeLang,
+                GridActionVocabLevelToggle: GridActionVocabLevelToggle,
                 GridElement: GridElement,
                 speechService: speechService,
                 i18nService: i18nService
             }
         },
         components: {
+            EditPodcastAction,
+            EditMatrixAction,
             EditPredefinedAction,
             EditWordFormAction,
             EditAudioAction,

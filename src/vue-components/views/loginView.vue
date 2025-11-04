@@ -143,6 +143,14 @@
                         <a href="#add">{{ $t('addOfflineUser') }}</a>
                     </div>
                 </div>
+                <div style="margin-top: 4em">
+                    <accordion :acc-label="$t('advancedOptions')" acc-background-color="white">
+                        <button class="btn-danger" @click="deleteOnlineUser(activeUser)" :disabled="!activeUser || !savedOnlineUsers.includes(activeUser)">
+                            <span class="fas fa-trash"></span>
+                            <span>{{ $t('deleteOnlineUser') }}</span>
+                        </button>
+                    </accordion>
+                </div>
             </div>
         </div>
         <div class="bottom-spacer"></div>
@@ -157,9 +165,13 @@
     import {Router} from "../../js/router";
     import HeaderIcon from '../../vue-components/components/headerIcon.vue'
     import {modelUtil} from "../../js/util/modelUtil";
+    import $ from '../../js/externals/jquery';
+    import { constants } from '../../js/util/constants';
+    import Accordion from '../components/accordion.vue';
+    import { MainVue } from '../../js/vue/mainVue';
 
     export default {
-        components: {HeaderIcon},
+        components: { Accordion, HeaderIcon},
         props: [],
         data() {
             return {
@@ -216,6 +228,7 @@
                 });
             },
             removeStoredUser(user) {
+                let localSettings = localStorageService.getUserSettings(user);
                 if (!(this.savedOnlineUsers.includes(user) || this.savedLocalUsers.includes(user))) {
                     loginService.logout();
                 } else {
@@ -229,6 +242,37 @@
                     }
                     databaseService.deleteDatabase(user);
                 }
+                this.updateUserLists();
+                $(document).trigger(constants.EVENT_USER_DELETED, [user, localSettings]);
+            },
+            async deleteOnlineUser(user) {
+                let givenPassword = prompt(i18nService.t('CONFIRM_DELETE_USER_ONLINE', user));
+                if (givenPassword === null) {
+                    return;
+                }
+                let deleteStatus = await loginService.deleteOnlineUser(user, givenPassword);
+                if (deleteStatus === loginService.DELETE_SUCCESS) {
+                    let localSettings = localStorageService.getUserSettings(user);
+                    localStorageService.removeLocalUser(user);
+                    databaseService.deleteDatabase(user);
+                    loginService.logout();
+                    this.activeUser = null;
+                    this.updateUserLists();
+                    $(document).trigger(constants.EVENT_USER_DELETED, [user, localSettings]);
+                    MainVue.setTooltip(i18nService.t('successRemovedOnlineUser', user), {
+                        msgType: "success"
+                    });
+                } else if (deleteStatus === loginService.DELETE_FAILED_WRONG_PASSWORD) {
+                    MainVue.setTooltip(i18nService.t('errorRemovingOnlineUserWrongPass', user), {
+                        msgType: "warn"
+                    });
+                } else {
+                    MainVue.setTooltip(i18nService.t('errorRemovingOnlineUser', user), {
+                        msgType: "warn"
+                    });
+                }
+            },
+            updateUserLists() {
                 this.allUsersList = localStorageService.getSavedUsers(this.activeUser);
                 this.savedUsers = localStorageService.getSavedUsers(this.activeUser);
                 this.savedOnlineUsers = localStorageService.getSavedOnlineUsers();

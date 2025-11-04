@@ -6,11 +6,22 @@ import { i18nService } from './i18nService';
 import { localStorageService } from './data/localStorageService';
 import { actionService } from './actionService';
 import { util } from '../util/util';
+import { podcastService } from './podcastService';
+/*import { format } from "date-fns";
+import { es, pt, it, enUS, fr, de } from "date-fns/locale";*/
 
 let liveElementService = {};
 
 let CHECK_INTERVAL = 1000;
 let DATA_PLACEHOLDER = '{0}';
+/*let DATE_FNS_LOCALES = {
+    es: es,
+    pt: pt,
+    it: it,
+    en: enUS,
+    fr: fr,
+    de: de
+}*/
 
 let registeredElements = [];
 let timeoutHandler = null;
@@ -67,7 +78,7 @@ liveElementService.getLastValue = function(elementId) {
  */
 liveElementService.getCurrentValue = async function(element, options = {}) {
     options = JSON.parse(JSON.stringify(options));
-    options.forceUpdate = options.forceUpdate || [GridElementLive.MODE_DATETIME, GridElementLive.MODE_APP_STATE].includes(element.mode);
+    options.forceUpdate = options.forceUpdate || [GridElementLive.MODE_DATETIME, GridElementLive.MODE_APP_STATE, GridElementLive.MODE_PODCAST_STATE].includes(element.mode);
     let updateMs = (element.updateSeconds || 0) * 1000;
     let cacheBecauseTime = !options.forceUpdate && lastUpdateTimes[element.id] && new Date().getTime() - lastUpdateTimes[element.id] < updateMs;
     let cacheBecauseUpdateSeconds0 = !options.forceUpdate && !element.updateSeconds;
@@ -88,6 +99,9 @@ liveElementService.getCurrentValue = async function(element, options = {}) {
             break;
         case GridElementLive.MODE_RANDOM:
             value = getValueRandom(element, options);
+            break;
+        case GridElementLive.MODE_PODCAST_STATE:
+            value = getValuePodcast(element);
             break;
     }
     if (element.extractMappings && element.extractMappings[value]) {
@@ -148,10 +162,19 @@ function getValueDateTime(element) {
             return getTimeText(element, { hour: 'numeric', minute: 'numeric', second: 'numeric' });
         case GridElementLive.DT_FORMAT_DATETIME:
             return getDateText(element, { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+        case GridElementLive.DT_FORMAT_DATETIME_LONG:
+            return getDateText(element, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
         case GridElementLive.DT_FORMAT_WEEKDAY:
             return getDateText(element, { weekday: 'long' });
         case GridElementLive.DT_FORMAT_MONTH:
             return getDateText(element, { month: 'long' });
+        /*case GridElementLive.DT_FORMAT_CUSTOM:
+            let locale = element.dateTimeLocale || i18nService.getContentLang();
+            let dateFnsLocaleKeys = Object.keys(DATE_FNS_LOCALES);
+            let key = dateFnsLocaleKeys.find(key => locale.startsWith(key)) || 'en';
+            return format(new Date(), element.dateTimeFormatCustom || 'EEEE, dd. MMMM yyyy, HH:mm', {
+                locale: DATE_FNS_LOCALES[key]
+            });*/
     }
     return '';
 }
@@ -201,6 +224,20 @@ function getValueRandom(element) {
     return values[index];
 }
 
+function getValuePodcast(element) {
+    let state = podcastService.getState();
+    switch (element.state) {
+        case GridElementLive.PODCAST_CURRENT_PODCAST:
+            return state.podcastTitle;
+        case GridElementLive.PODCAST_CURRENT_EPISODE:
+            return state.episodeTitle;
+        case GridElementLive.PODCAST_PLAY_TIME:
+            return formatDuration(state.currentSeconds);
+        case GridElementLive.PODCAST_REMAINING_TIME:
+            return formatDuration(state.remainingSeconds);
+    }
+}
+
 function extractFromJson(element, text) {
     let selector = element.extractSelector || '';
     let path = selector.split('.');
@@ -240,11 +277,29 @@ function extractFromHTML(element, text) {
 }
 
 function getDateText(element, options) {
-    return new Date().toLocaleDateString(i18nService.getContentLang(), options);
+    let locale = element.dateTimeLocale || i18nService.getContentLang();
+    return new Date().toLocaleDateString(locale, options);
 }
 
 function getTimeText(element, options) {
-    return new Date().toLocaleTimeString(i18nService.getContentLang(), options);
+    let locale = element.dateTimeLocale || i18nService.getContentLang();
+    return new Date().toLocaleTimeString(locale, options);
+}
+
+function formatDuration(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    const paddedMins = String(mins).padStart(2, '0');
+    const paddedSecs = String(secs).padStart(2, '0');
+
+    if (hrs > 0) {
+        const paddedHrs = String(hrs).padStart(2, '0');
+        return `${paddedHrs}:${paddedMins}:${paddedSecs}`;
+    }
+
+    return `${paddedMins}:${paddedSecs}`;
 }
 
 function triggerTextEvent(element, text) {
